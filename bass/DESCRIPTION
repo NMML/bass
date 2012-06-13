@@ -8,4 +8,4 @@ Package: bass
      Suggests: rgeos
      Description: Tools and analysis procedures related to 
             Bering-Arctic Seal Surveys
-     License: public domain
+     License: unlimited

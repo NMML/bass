@@ -1,0 +1,11 @@
+Package: bass
+     Version: 0.1
+     Date: 2012-06-12
+     Title: Bering Arctic Seal Surveys
+     Author: Josh M London and Paul Conn
+     Maintainer: Josh London <josh.london@noaa.gov>
+     Depends: R (>= 2.15.0), raster, sp, rgdal
+     Suggests: rgeos
+     Description: Tools and analysis procedures related to 
+            Bering-Arctic Seal Surveys
+     License: public domain

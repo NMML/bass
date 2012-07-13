@@ -39,7 +39,7 @@ library(rgdal)
 
 ```
 ## Geospatial Data Abstraction Library extensions to R successfully loaded
-## Loaded GDAL runtime: GDAL 1.9.0, released 2011/12/29
+## Loaded GDAL runtime: GDAL 1.9.1, released 2012/05/15
 ## Path to GDAL shared files: /Library/Frameworks/GDAL.framework/Versions/1.9/Resources/gdal
 ## Loaded PROJ.4 runtime: Rel. 4.8.0, 6 March 2012, [PJ_VERSION: 480]
 ## Path to PROJ.4 shared files: (autodetected)
@@ -62,7 +62,7 @@ library(rgeos)
 
 ```
 ## rgeos: (SVN revision 330)
-##  GEOS runtime version: 3.3.2-CAPI-1.7.2 
+##  GEOS runtime version: 3.3.5-CAPI-1.7.5 
 ##  Polygon checking: TRUE 
 ##  WARNING! if you turn polygon checking off, and polygons are
 ##  not valid in GEOS, you risk losing data as your R session may crash! 
@@ -103,7 +103,8 @@ To determine the boundaries of our study area, we need to examine the SSM/I EASE
 tmp <- tempfile(fileext = ".tif")
 download.file(paste("file:///Volumes/Polar/Data/Environ/SeaIce/SSMI_SIC/2012/", 
     "nt_20120401_f17_nrt_n.bin.reproj.tif", sep = ""), tmp)
-# non-mac users will likely need to replace /Volumes/ with //akc-nmml/
+# non-mac users will likely need to replace /Volumes/ with
+# //afsc/akc-nmml/
 r <- raster(tmp)
 r
 ```
@@ -116,11 +117,26 @@ r
 ## resolution  : 25068, 25068  (x, y)
 ## extent      : -5922823, 6109589, -5874646, 6157766  (xmin, xmax, ymin, ymax)
 ## coord. ref. : +proj=laea +lat_0=90 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 
-## values      : /private/var/folders/42/x3dcnwt91pgdvgdmn_l3gtkh0004p2/T/RtmpwvQXQp/file40f35f3f85bb.tif 
+## values      : /private/var/folders/42/x3dcnwt91pgdvgdmn_l3gtkh0004p2/T/RtmptNwY0y/file41ee65fdf06d.tif 
 ## min value   : 0 
 ## max value   : 255 
-## layer name  : file40f35f3f85bb 
+## layer name  : file41ee65fdf06d 
 ## 
+```
+
+
+
+
+The PROJ4 string for this file should read:
+
+`+proj=laea +lat_0=90 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs`
+
+If this projection is not recognized (as appears to be the case for Windows installations), another command will need to be run to set the projection data.
+
+
+
+```r
+projection(r) <- "+proj=laea +lat_0=90 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
 ```
 
 

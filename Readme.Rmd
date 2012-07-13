@@ -43,7 +43,7 @@ To determine the boundaries of our study area, we need to examine the SSM/I EASE
 tmp <- tempfile(fileext=".tif")
 download.file(paste("file:///Volumes/Polar/Data/Environ/SeaIce/SSMI_SIC/2012/",
                     "nt_20120401_f17_nrt_n.bin.reproj.tif",sep=""),tmp)
-# non-mac users will likely need to replace /Volumes/ with //akc-nmml/
+# non-mac users will likely need to replace /Volumes/ with //afsc/akc-nmml/
 r<-raster(tmp)
 r
 ```

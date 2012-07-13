@@ -48,6 +48,16 @@ r<-raster(tmp)
 r
 ```
 
+The PROJ4 string for this file should read:
+
+`+proj=laea +lat_0=90 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs`
+
+If this projection is not recognized (as appears to be the case for Windows installations), another command will need to be run to set the projection data.
+
+```{r set_projection}
+projection(r) <- "+proj=laea +lat_0=90 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
+```
+
 ### NSIDC SSM/I GeoTiff Sea-ice Concentration Files
 
 The coordinate reference system describes the EASE Grid v2.0 projection. This is an equal area projection based on the Lambert Azimuthal Equal Area projection and is centered with a latitude of origin at the north pole and a longitude of origin set to 0 degrees. The nominal cell dimension is 25km x 25km, however, as is shown above, the actual dimension is 25.06753km x 25.06753km.

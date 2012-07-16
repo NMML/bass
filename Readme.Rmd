@@ -42,7 +42,8 @@ To determine the boundaries of our study area, we need to examine the SSM/I EASE
 ```{r get_sic_file}
 tmp <- tempfile(fileext=".tif")
 download.file(paste("file:///Volumes/Polar/Data/Environ/SeaIce/SSMI_SIC/2012/",
-                    "nt_20120401_f17_nrt_n.bin.reproj.tif",sep=""),tmp)
+                    "nt_20120401_f17_nrt_n.bin.reproj.tif",sep=""),destfile=tmp,
+                    mode="wb")
 # non-mac users will likely need to replace /Volumes/ with //afsc/akc-nmml/
 r<-raster(tmp)
 r
@@ -52,11 +53,6 @@ The PROJ4 string for this file should read:
 
 `+proj=laea +lat_0=90 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs`
 
-If this projection is not recognized (as appears to be the case for Windows installations), another command will need to be run to set the projection data.
-
-```{r set_projection}
-projection(r) <- "+proj=laea +lat_0=90 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
-```
 
 ### NSIDC SSM/I GeoTiff Sea-ice Concentration Files
 

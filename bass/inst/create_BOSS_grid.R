@@ -1,11 +1,12 @@
 #script file for windoze
 
 library(sp)
-library(proj4)
+#library(proj4)
 library(rgdal)
 library(rgeos)
 library(raster)
 library(nPacMaps)  #from Josh London
+library(maptools)
 
 
 #tmp <- tempfile(fileext = ".tif",tmpdir="d:/temp")
@@ -51,4 +52,45 @@ plot(sic_raster, col = colorRampPalette(c("dark blue", "deepskyblue","skyblue", 
 plot(alaska_dcw, col = "black", add = TRUE)
 plot(russia_dcw, col = "black", add = TRUE)
 plot(pep_ext, col = "red", add = TRUE)
+
+Grid<-as(sic_raster,"SpatialGridDataFrame")
+Grid[[1]]=1  #just set to a non-NA value so translation to SpPolyDF will work correctly
+
+#define separate SpPolyDFs for mainland
+Area_alaska=gArea(alaska_dcw,byid=TRUE)
+Area_russia=gArea(alaska_dcw,byid=TRUE)
+Alaska_mainland=alaska_dcw[which(Area_alaska==max(Area_alaska)),]
+Russia_mainland=russia_dcw[which(Area_russia==max(Area_russia)),]
+
+#Attach proportion land for each cell
+Grid_poly<-as(Grid,"SpatialPolygonsDataFrame") #convert to SpPolyDF for compatibility with rgeos
+Land=list(alaska=alaska_dcw,russia=russia_dcw)
+#the following takes awhile.  Instead, consider loading cur.Grid.Rdat
+Grid_poly=add.prop.land(Grid=Grid_poly,Land=Land)
+#remove initial layer
+Grid_poly=Grid_poly[,-1]
+save.image("cur.Grid.Rdat")
+#load("cur.Grid.Rdat")
+
+#Attach distance to mainland for each cell (distance from grid cell centroid to landscape polygon)
+Grid_points=gCentroid(Grid_poly,byid=TRUE)
+Dist_AK=gDistance(Grid_points,Alaska_mainland,byid=TRUE)
+Dist_Rus=gDistance(Grid_points,Russia_mainland,byid=TRUE)
+Dist_mainland=apply(cbind(as.vector(Dist_AK),as.vector(Dist_Rus)),1,'min')
+Grid_poly[["dist_mainland"]]=Dist_mainland
+
+#Attach distance to land (including islands) for each cell
+Dist_AK=apply(gDistance(Grid_points,alaska_dcw,byid=TRUE),2,'min')
+Dist_Rus=apply(gDistance(Grid_points,russia_dcw,byid=TRUE),2,'min')
+Dist_land=apply(cbind(as.vector(Dist_AK),as.vector(Dist_Rus)),1,'min')
+Grid_poly[["dist_land"]]=Dist_land
+save.image("cur.Grid.Rdat")
+
+#input and attach distance to "southern ice edge latitude" (determined by creating a line corresponding to southernmost ice edge and determining distance to this line)
+#note to do this for real, we'd have to loop over filenames and attach values for each date
+IceExtent=readOGR(dsn="c:/users/paul.conn/git/bass/ice",layer="nic_autoc2012136n_pl_a")
+IceExtent=spTransform(IceExtent, CRS(laea_180_proj))
+Grid_poly=add.dist.s.ice.edge(Grid=Grid_poly,Grid_points=Grid_points,IceExtent=IceExtent,proj=laea_180_proj)
+  
+
 

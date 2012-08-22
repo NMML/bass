@@ -86,6 +86,11 @@ Dist_land=apply(cbind(as.vector(Dist_AK),as.vector(Dist_Rus)),1,'min')
 Grid_poly[["dist_land"]]=Dist_land
 save.image("cur.Grid.Rdat")
 
+#Attach distance to 10% Sea-ice Concentration Contour for each cell
+sic_contour <- rasterToContour(sic_raster,levels=c(10))
+Dist_contour <- gDistance(Grid_points,sic_contour,byid=TRUE)
+Grid_poly[["dist_contour"]]=as.vector(Dist_contour)
+
 #input and attach distance to "southern ice edge latitude" (determined by creating a line corresponding to southernmost ice edge and determining distance to this line)
 #note to do this for real, we'd have to loop over filenames and attach values for each date
 IceExtent=readOGR(dsn="c:/users/paul.conn/git/bass/ice",layer="nic_autoc2012136n_pl_a")

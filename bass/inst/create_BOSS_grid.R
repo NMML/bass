@@ -1,6 +1,20 @@
 #script file to produce BOSS data for 2012 power analysis
 #authors: Paul Conn & Josh London
-
+#output: A list, "Data", comprised of the following objects:
+# 1) "Grid" - this is a list of SpatialPolygonDataFrames, with one SPDF for each date of the survey.
+#     Each polygon corresponds to a 25x25k grid cell. Presently, the following covariates are included in each data frame:
+#     land_cover - proportion land covered by grid cell
+#     dist_mainland - minimum distance from grid cell centroid to russia or alaska coast (excluding islands)
+#     dist_land - minimum distance to any land (including islands)
+#     dist_shelf - distance from 1000 meter depth contour
+#     ice_conc - Percent of the grid cell covered by sea ice (from NSIDC)
+#     dist_contour - distance from grid cell centroid to the closest 10% sea ice contour (a surrogate for distance to open water)
+#     dist_ice_edge - distance from the latitude of the southernmost ice edge
+#  The final three variables vary over time.
+# 2) "Adj" - this is an adjacency matrix calculated with a queen's move for use with areal spatial models
+# 3) "Meta" - this holds a few metadata entries
+# 4) "Photos" - not currently implemented, but will eventually hold a spatial points dataframe giving locations,
+#     and seal species counts, etc. needed for abundance estimation
 library(sp)
 #library(proj4)
 library(rgdal)
@@ -10,6 +24,7 @@ library(nPacMaps)  #from Josh London
 library(maptools)
 
 DEBUG=TRUE
+MEAN_ADJUST=TRUE  #if TRUE, standardizes "distance to" covariates to their means
 
 if(DEBUG)source("c:/users/paul.conn/git/bass/bass/R/bass.R")
 
@@ -83,12 +98,14 @@ Grid_points=gCentroid(Grid_poly,byid=TRUE)
 Dist_AK=gDistance(Grid_points,Alaska_mainland,byid=TRUE)
 Dist_Rus=gDistance(Grid_points,Russia_mainland,byid=TRUE)
 Dist_mainland=apply(cbind(as.vector(Dist_AK),as.vector(Dist_Rus)),1,'min')
+if(MEAN_ADJUST)Dist_mainland=Dist_mainland/mean(Dist_mainland)
 Grid_poly[["dist_mainland"]]=Dist_mainland
 
 #Attach distance to land (including islands) for each cell
 Dist_AK=apply(gDistance(Grid_points,alaska_dcw,byid=TRUE),2,'min')
 Dist_Rus=apply(gDistance(Grid_points,russia_dcw,byid=TRUE),2,'min')
 Dist_land=apply(cbind(as.vector(Dist_AK),as.vector(Dist_Rus)),1,'min')
+if(MEAN_ADJUST)Dist_land=Dist_land/mean(Dist_land)
 Grid_poly[["dist_land"]]=Dist_land
 
 #Attach distance to shelf break (1000m depth contour) for each cell
@@ -103,6 +120,7 @@ EEZs=spTransform(EEZs, CRS(laea_180_proj))
 EEZ_Alaska=EEZs[1,]  #limit to Alaska EEZ
 Shelf_break=gDifference(Shelf_break,gBuffer(gBoundary(EEZ_Alaska),width=30000))
 Dist_shelf=apply(gDistance(Grid_points,Shelf_break,byid=TRUE),2,'min')
+if(MEAN_ADJUST)Dist_shelf=Dist_shelf/mean(Dist_shelf)
 Grid_poly[["dist_shelf"]]=Dist_shelf
 
 #output grid - this outputs spatial polygons dataframe for "large" grid with all time-constant
@@ -150,7 +168,7 @@ Data=list(Adj=Adj_reduced)
 Data$Grid=vector("list",length(Date))  #allocate space for one SpatialPolygonsDataframe for each date in study
 for(idate in 1:length(Date))Data$Grid[[idate]]=Grid_reduced
 
-#attach daily sea ice concentration
+#attach daily sea ice concentration & distance to 10% sea-ice concentration contour for each cell
 for(idate in 1:length(Date)){
   cat(paste("\n date",idate,"of",length(Date),"\n"))
   filename=paste(str1,Date[idate],str2,sep='')
@@ -159,8 +177,11 @@ for(idate in 1:length(Date)){
   tmp_raster <- projectRaster(tmp_raster, res = c(25067.53, 25067.53),
                               crs = laea_180_proj)
   tmp_raster <- crop(tmp_raster, pep_ext, snap = "near")
+  sic_contour=rasterToContour(tmp_raster,levels=c(10))
+  dist_contour=as.vector(gDistance(Grid_points[Include==1,],sic_contour,byid=TRUE))
   ice_conc=values(tmp_raster)[Include==1]
-  Data$Grid[[idate]]=spCbind(Data$Grid[[idate]],ice_conc)
+  if(MEAN_ADJUST)dist_contour=dist_contour/mean(dist_contour)
+  Data$Grid[[idate]]=spCbind(spCbind(Data$Grid[[idate]],ice_conc),dist_contour)
 }
 
 #input and attach distance to "southern ice edge latitude" (determined by creating a line corresponding to southernmost ice edge and determining distance to this line)
@@ -172,12 +193,17 @@ for(idate in 1:length(Date)){
   filename=paste(str1,Date[idate],str2,sep='')
   IceExtent=readOGR(dsn="x:/polar/data/environ/seaice/nic/2012",layer=filename)
   IceExtent=spTransform(IceExtent, CRS(laea_180_proj))
-  Data$Grid[[idate]]=add.dist.s.ice.edge(Grid=Data$Grid[[idate]],Grid_points=Grid_points[Include==1,],IceExtent=IceExtent,proj=laea_180_proj)
+  Data$Grid[[idate]]=add.dist.s.ice.edge(Grid=Data$Grid[[idate]],Grid_points=Grid_points[Include==1,],IceExtent=IceExtent,proj=laea_180_proj,mean_adjust=MEAN_ADJUST)
 }  
 
 #add some metadata
 Data$Meta=list(date.start="20Apr2012",date.end="27Apr2012")
 Data$Meta$info="2012 PEP BOSS survey data for power analysis"
 
+#save dataset
+save(Data,file="Power_Data_noPhotos.rdat")
+
 #output grid data from one year as a shapefile for Mike & other Arc users
 writeOGR(Grid_reduced,dsn=".",layer="Grid2012",driver="ESRI Shapefile")
+
+

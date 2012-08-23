@@ -7,6 +7,7 @@
 #' @docType package
 #' @name bass
 #' @aliases bass bass-package
+#' @author Paul Conn & Josh London
 NULL
 
 #' Add a column to the SpatialPolygonsDataFrame object giving the proportion of area
@@ -48,13 +49,14 @@ add.prop.land<-function(Grid,Land,rel=TRUE){
 #' @param Grid_points centroids of Grid (SpatialPoints object)
 #' @param IceExtent  a SpatialPolygonsDataFrames giving ice extent (e.g. as imported from NIC shapefile)
 #' @param proj  current projection
+#' @param mean_adjust if TRUE, standardize distance covariate by dividing by its mean
 #' @author Paul Conn (paul.conn@noaa.gov)
 #' @return SpatialPolygonsDataFrame object, which includes distance from southern ice edge as an additional column
 #' @examples
 #' New_grid <- add.dist.s.ice.edge(Grid,IceExtent)
 #' New_grid
 #' @export
-add.dist.s.ice.edge<-function(Grid,Grid_points,IceExtent,proj){
+add.dist.s.ice.edge<-function(Grid,Grid_points,IceExtent,proj,mean_adjust=TRUE){
   bb=bbox(Grid)
   bbox.p=Polygon(cbind(c(bb[1,1],bb[1,1],bb[1,2],bb[1,2],bb[1,1]),c(bb[2,1],bb[2,2],bb[2,2],bb[2,1],bb[2,1])))
   bbox.ps=Polygons(list(bbox.p),1)
@@ -66,7 +68,8 @@ add.dist.s.ice.edge<-function(Grid,Grid_points,IceExtent,proj){
   southern_line=Lines(list(southern_line),1)
   southern_line=SpatialLines(list(southern_line))
   proj4string(southern_line)=CRS(proj)
-  dist_ice_edge=t(gDistance(Grid_points,southern_line,byid=TRUE))
+  dist_ice_edge=as.vector(gDistance(Grid_points,southern_line,byid=TRUE))
+  if(mean_adjust)dist_ice_edge=dist_ice_edge/mean(dist_ice_edge)
   Grid=spCbind(Grid,dist_ice_edge)
   Grid
 }
@@ -145,3 +148,5 @@ rect_adj <- function(x,y,byrow=FALSE){
   if(byrow==TRUE)Adj=t(Adj)
   return(Adj)
 }
+
+

@@ -91,6 +91,7 @@ Grid_poly[["dist_contour"]]=as.vector(Dist_contour)
 IceExtent=readOGR(dsn="c:/users/paul.conn/git/bass/ice",layer="nic_autoc2012136n_pl_a")
 IceExtent=spTransform(IceExtent, CRS(laea_180_proj))
 Grid_poly=add.dist.s.ice.edge(Grid=Grid_poly,Grid_points=Grid_points,IceExtent=IceExtent,proj=laea_180_proj)
-  
 
-
+#convert Grid_poly to SpatialPixelsDataFrame and then to a RasterStack
+Grid_pix <- SpatialPixelsDataFrame(coordinates(Grid_poly),data=Grid_poly@data)
+Grid_stack<-stack(Grid_pix)

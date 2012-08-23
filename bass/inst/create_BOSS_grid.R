@@ -9,9 +9,7 @@ library(nPacMaps)  #from Josh London
 library(maptools)
 
 
-#tmp <- tempfile(fileext = ".tif",tmpdir="d:/temp")
-#download.file(url=paste("file:////afsc/akc-nmml/Polar/Data/Environ/SeaIce/SSMI_SIC/2012/","nt_20120401_f17_nrt_n.bin.reproj.tif", sep = ""), destfile=tmp,mode="wb")
-#r <- raster(tmp)
+#r <- raster("~/Dropbox/sea_ice/ssmi_ease/nt_20120401_f17_nrt_n.bin.reproj.tif")
 r<-raster("//afsc/akc-nmml/Polar/Data/Environ/SeaIce/SSMI_SIC/2012/nt_20120401_f17_nrt_n.bin.reproj.tif")
 
 #extent(r)<-c(-5922823,6109589,-5874646,6157766) 
@@ -53,9 +51,6 @@ plot(alaska_dcw, col = "black", add = TRUE)
 plot(russia_dcw, col = "black", add = TRUE)
 plot(pep_ext, col = "red", add = TRUE)
 
-Grid<-as(sic_raster,"SpatialGridDataFrame")
-Grid[[1]]=1  #just set to a non-NA value so translation to SpPolyDF will work correctly
-
 #define separate SpPolyDFs for mainland
 Area_alaska=gArea(alaska_dcw,byid=TRUE)
 Area_russia=gArea(alaska_dcw,byid=TRUE)
@@ -63,7 +58,7 @@ Alaska_mainland=alaska_dcw[which(Area_alaska==max(Area_alaska)),]
 Russia_mainland=russia_dcw[which(Area_russia==max(Area_russia)),]
 
 #Attach proportion land for each cell
-Grid_poly<-as(Grid,"SpatialPolygonsDataFrame") #convert to SpPolyDF for compatibility with rgeos
+Grid_poly<-rasterToPolygons(sic_raster,na.rm=FALSE) #convert to SpPolyDF for compatibility with rgeos
 Land=list(alaska=alaska_dcw,russia=russia_dcw)
 #the following takes awhile.  Instead, consider loading cur.Grid.Rdat
 Grid_poly=add.prop.land(Grid=Grid_poly,Land=Land)

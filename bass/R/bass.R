@@ -7,6 +7,7 @@
 #' @docType package
 #' @name bass
 #' @aliases bass bass-package
+#' @author Paul Conn & Josh London
 NULL
 
 #' Add a column to the SpatialPolygonsDataFrame object giving the proportion of area
@@ -33,7 +34,7 @@ add.prop.land<-function(Grid,Land,rel=TRUE){
 			I.intersect=gIntersects(Grid[icell,],Land[[iobj]],byid=TRUE)
 			if(sum(I.intersect)>0){
 				Int_id=which(I.intersect==TRUE)
-				for(iind in 1:length(Int_id))Land.area[icell]=Land.area[icell]+gArea(gIntersection(Grid.poly[icell,],Land[[iobj]][Int_id[iind],]))
+				for(iind in 1:length(Int_id))Land.area[icell]=Land.area[icell]+gArea(gIntersection(Grid[icell,],Land[[iobj]][Int_id[iind],]))
 			}
 		}
 	}
@@ -48,13 +49,14 @@ add.prop.land<-function(Grid,Land,rel=TRUE){
 #' @param Grid_points centroids of Grid (SpatialPoints object)
 #' @param IceExtent  a SpatialPolygonsDataFrames giving ice extent (e.g. as imported from NIC shapefile)
 #' @param proj  current projection
+#' @param mean_adjust if TRUE, standardize distance covariate by dividing by its mean
 #' @author Paul Conn (paul.conn@noaa.gov)
 #' @return SpatialPolygonsDataFrame object, which includes distance from southern ice edge as an additional column
 #' @examples
 #' New_grid <- add.dist.s.ice.edge(Grid,IceExtent)
 #' New_grid
 #' @export
-add.dist.s.ice.edge<-function(Grid,Grid_points,IceExtent,proj){
+add.dist.s.ice.edge<-function(Grid,Grid_points,IceExtent,proj,mean_adjust=TRUE){
   bb=bbox(Grid)
   bbox.p=Polygon(cbind(c(bb[1,1],bb[1,1],bb[1,2],bb[1,2],bb[1,1]),c(bb[2,1],bb[2,2],bb[2,2],bb[2,1],bb[2,1])))
   bbox.ps=Polygons(list(bbox.p),1)
@@ -66,6 +68,85 @@ add.dist.s.ice.edge<-function(Grid,Grid_points,IceExtent,proj){
   southern_line=Lines(list(southern_line),1)
   southern_line=SpatialLines(list(southern_line))
   proj4string(southern_line)=CRS(proj)
-  Grid[["dist_ice_southern"]]=t(gDistance(Grid_points,southern_line,byid=TRUE))
+  dist_ice_edge=as.vector(gDistance(Grid_points,southern_line,byid=TRUE))
+  if(mean_adjust)dist_ice_edge=dist_ice_edge/mean(dist_ice_edge)
+  Grid=spCbind(Grid,dist_ice_edge)
   Grid
 }
+
+#' Produce an adjacency matrix for a rectangular grid for use with areal spatial models (queens move)
+#' @param x number of cells on horizontal side of grid
+#' @param y number of cells on vertical side of grid
+#' @param byrow If TRUE, cell indices are filled along rows (default is FALSE)
+#' @return adjacency matrix
+#' @export 
+#' @keywords adjacency
+#' @author Paul Conn
+rect_adj <- function(x,y,byrow=FALSE){
+  Ind=matrix(c(1:(x*y)),y,x,byrow=byrow)
+  if(byrow==TRUE)Ind=t(Ind)
+  n.row=nrow(Ind)
+  n.col=ncol(Ind)
+  Adj=matrix(0,x*y,x*y)
+  for(i in 1:n.row){
+    for(j in 1:n.col){
+      if(i==1 & j==1){
+        Adj[Ind[i,j],Ind[i,j]+1]=1
+        Adj[Ind[i,j],Ind[i,j]+n.row]=1
+        Adj[Ind[i,j],Ind[i,j]+n.row+1]=1
+      }
+      if(i==1 & j>1 & j<n.col){
+        Adj[Ind[i,j],Ind[i,j]+1]=1
+        Adj[Ind[i,j],Ind[i,j]+n.row]=1
+        Adj[Ind[i,j],Ind[i,j]-n.row]=1
+        Adj[Ind[i,j],Ind[i,j]+n.row+1]=1
+        Adj[Ind[i,j],Ind[i,j]-n.row+1]=1
+      }
+      if(i==1 & j==n.col){
+        Adj[Ind[i,j],Ind[i,j]+1]=1
+        Adj[Ind[i,j],Ind[i,j]-n.row]=1
+        Adj[Ind[i,j],Ind[i,j]-n.row+1]=1
+      }
+      if(i>1 & i<n.row & j==1){
+        Adj[Ind[i,j],Ind[i,j]+1]=1
+        Adj[Ind[i,j],Ind[i,j]+n.row]=1
+        Adj[Ind[i,j],Ind[i,j]-1]=1
+        Adj[Ind[i,j],Ind[i,j]+n.row-1]=1
+        Adj[Ind[i,j],Ind[i,j]+n.row+1]=1
+      }
+      if(i>1 & i<n.row & j>1 & j<n.col){
+        cur.nums=c(Ind[i,j]-n.row-1,Ind[i,j]-n.row,Ind[i,j]-n.row+1,Ind[i,j]-1,Ind[i,j]+1,Ind[i,j]+n.row-1,Ind[i,j]+n.row,Ind[i,j]+n.row+1)
+        Adj[Ind[i,j],cur.nums]=1
+      }
+      if(i>1 & i<n.row & j==n.col){
+        Adj[Ind[i,j],Ind[i,j]+1]=1
+        Adj[Ind[i,j],Ind[i,j]-n.row]=1
+        Adj[Ind[i,j],Ind[i,j]-1]=1
+        Adj[Ind[i,j],Ind[i,j]-n.row-1]=1
+        Adj[Ind[i,j],Ind[i,j]-n.row+1]=1
+        
+      }
+      if(i==n.row & j==1){
+        Adj[Ind[i,j],Ind[i,j]+n.row]=1
+        Adj[Ind[i,j],Ind[i,j]-1]=1
+        Adj[Ind[i,j],Ind[i,j]+n.row-1]=1
+      }
+      if(i==n.row & j>1 & j<n.col){
+        Adj[Ind[i,j],Ind[i,j]+n.row]=1
+        Adj[Ind[i,j],Ind[i,j]-1]=1
+        Adj[Ind[i,j],Ind[i,j]-n.row]=1
+        Adj[Ind[i,j],Ind[i,j]+n.row-1]=1
+        Adj[Ind[i,j],Ind[i,j]-n.row-1]=1
+      }
+      if(i==n.row & j==n.col){
+        Adj[Ind[i,j],Ind[i,j]-1]=1
+        Adj[Ind[i,j],Ind[i,j]-n.row]=1
+        Adj[Ind[i,j],Ind[i,j]-n.row-1]=1
+      }
+    }
+  }
+  if(byrow==TRUE)Adj=t(Adj)
+  return(Adj)
+}
+
+

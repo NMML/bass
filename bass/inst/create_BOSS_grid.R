@@ -74,9 +74,6 @@ plot(alaska_dcw, col = "black", add = TRUE)
 plot(russia_dcw, col = "black", add = TRUE)
 plot(pep_ext, col = "red", add = TRUE)
 
-Grid<-as(sic_raster,"SpatialGridDataFrame")
-Grid[[1]]=1  #just set to a non-NA value so translation to SpPolyDF will work correctly
-
 #define separate SpPolyDFs for mainland
 Area_alaska=gArea(alaska_dcw,byid=TRUE)
 Area_russia=gArea(russia_dcw,byid=TRUE)
@@ -84,7 +81,7 @@ Alaska_mainland=alaska_dcw[which(Area_alaska==max(Area_alaska)),]
 Russia_mainland=russia_dcw[which(Area_russia==max(Area_russia)),]
 
 #Attach proportion land for each cell
-Grid_poly<-as(Grid,"SpatialPolygonsDataFrame") #convert to SpPolyDF for compatibility with rgeos
+Grid_poly<-rasterToPolygons(sic_raster,na.rm=FALSE) #convert to SpPolyDF for compatibility with rgeos
 Land=list(alaska=alaska_dcw,russia=russia_dcw)
 #the following takes awhile.  Instead, consider loading cur.Grid.Rdat
 Grid_poly=add.prop.land(Grid=Grid_poly,Land=Land)
@@ -205,5 +202,9 @@ save(Data,file="Power_Data_noPhotos.rdat")
 
 #output grid data from one year as a shapefile for Mike & other Arc users
 writeOGR(Grid_reduced,dsn=".",layer="Grid2012",driver="ESRI Shapefile")
+
+#convert Grid_poly to SpatialPixelsDataFrame and then to a RasterStack ... this might be a better object class as the foundation for remaining analysis
+Grid_pix <- SpatialPixelsDataFrame(coordinates(Grid_poly),data=Grid_poly@data)
+Grid_stack<-stack(Grid_pix)
 
 

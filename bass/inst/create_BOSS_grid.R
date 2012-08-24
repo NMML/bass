@@ -79,7 +79,7 @@ Grid[[1]]=1  #just set to a non-NA value so translation to SpPolyDF will work co
 
 #define separate SpPolyDFs for mainland
 Area_alaska=gArea(alaska_dcw,byid=TRUE)
-Area_russia=gArea(alaska_dcw,byid=TRUE)
+Area_russia=gArea(russia_dcw,byid=TRUE)
 Alaska_mainland=alaska_dcw[which(Area_alaska==max(Area_alaska)),]
 Russia_mainland=russia_dcw[which(Area_russia==max(Area_russia)),]
 

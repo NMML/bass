@@ -1,0 +1,20 @@
+
+NEWS for R package, BASS
+
+Objects for conducting analysis of aerial survey data (including spatial grid and covariate
+information) are now formulated using the knitr file "create_BOSS_grids.Rnw" located in the
+bass/bass/inst directory.  This file intersperses text (suitable for LaTeX compilation) together
+with code, and can be executed directly in an environment such as Rstudio.  Note that access to
+AFSC/NMML network drives is required to run all the code as it pulls in ice imagery data from
+those locations.  For those interested
+in the procedures used to generate data, who do not necessarily need to execute the code, see 
+"create_BOSS_grids.pdf".  There are additional details about projections, ice imagery, etc. provided in 
+"IceData_readme.pdf," also in the inst directory (this was written by J. London).  The inst directory
+also includes some .Rdat files that include relevant data for 
+
+  (1) The Alaska portion of the Bering Sea in 2012 (4/4/12-5/14/12) "AlaskaBeringData.Rdat"
+  (2) The entire Bering Sea in 2012 (4/4/12-5/14/12) "BeringData.Rdat"
+  (3) The Okhotsk in 2012 (4/4/12-5/14/12) "Okhotsk_Grid_2012.Rdat"
+  
+There are also some shapefiles included in the inst directory that provide grid layers for the Bering and 
+Okhotsk. 

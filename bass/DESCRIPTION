@@ -1,14 +1,26 @@
 Package: bass
-    Version: 0.1
-    Date: 2012-06-12
-    Title: Bering Arctic Seal Surveys
-    Author: Josh M London and Paul Conn
-    Maintainer: Josh London <josh.london@noaa.gov>
-    Depends: R (>= 2.15.0), raster, sp, rgdal
-    Suggests: rgeos
-    Description: Tools and analysis procedures related to
-    Bering-Arctic Seal Surveys
-    License: unlimited
+Version: 0.2
+Date: 2013-01-23
+License: Unlimited
+Title: Bering Arctic Seal Surveys
+Type: Package
+LazyLoad: yes
+Author: Josh M London and Paul B Conn
+Maintainer: Paul B Conn <paul.conn@noaa.gov>
+Depends:
+    R (>= 2.15.2),
+    raster,
+    sp,
+    rgdal
+Suggests:
+    automap,
+    ggplot2,
+    gpclib,
+    maptools,
+    nPacMaps,
+    raster,
+    rgeos
+Description: Tools and analysis procedures related to Bering-Arctic Seal Surveys
 Collate:
     'GetBASSExtent.R'
     'bass.R'

@@ -20,11 +20,8 @@ NULL
 #' @param Grid	master SpatialPolygonsDataFrame object for which land calculations are desired (separate calculations occur for each subgeometry)
 #' @param Land  a list of SpatialPolygonsDataFrames that represent land cover 
 #' @param rel   if TRUE (default), returns proportional area; if FALSE, returns absolute area
-#' @author Paul Conn (paul.conn@noaa.gov)
+#' @author Paul Conn \email{paul.conn@@noaa.gov}
 #' @return SpatialPolygonsDataFrame object, which includes proportion land cover as an additional column
-#' @examples
-#' New_grid <- add.prop.land(Grid,Land,rel=TRUE)
-#' New_grid
 #' @export
 add.prop.land<-function(Grid,Land,rel=TRUE){
 	n_cells=dim(Grid)[1]
@@ -43,18 +40,16 @@ add.prop.land<-function(Grid,Land,rel=TRUE){
 	Grid
 }
 
-#' Add line to SpatialPolygonsDataFrame that gives distance from "southern ice edge" for the centroid of each grid cell
+#' Add line to SpatialPolygonsDataFrame that gives distance from "southern ice edge" for the centroid of each grid cell.
+#' This version function is depracated - see function get.edge.Bering for the current version
 #'
 #' @param Grid  master SpatialPolygonsDataFrame object to add to
 #' @param Grid_points centroids of Grid (SpatialPoints object)
 #' @param IceExtent  a SpatialPolygonsDataFrames giving ice extent (e.g. as imported from NIC shapefile)
 #' @param proj  current projection
 #' @param mean_adjust if TRUE, standardize distance covariate by dividing by its mean
-#' @author Paul Conn (paul.conn@noaa.gov)
+#' @author Paul Conn \email{paul.conn@@noaa.gov}
 #' @return SpatialPolygonsDataFrame object, which includes distance from southern ice edge as an additional column
-#' @examples
-#' New_grid <- add.dist.s.ice.edge(Grid,IceExtent)
-#' New_grid
 #' @export
 add.dist.s.ice.edge<-function(Grid,Grid_points,IceExtent,proj,mean_adjust=TRUE){
   bb=bbox(Grid)
@@ -74,6 +69,54 @@ add.dist.s.ice.edge<-function(Grid,Grid_points,IceExtent,proj,mean_adjust=TRUE){
   Grid
 }
 
+#' calculate southern ice edge from spatial polygons object giving sea ice concentration
+#' @param SpDF  SpatialPolygonsDataFrame object giving sea ice concentration
+#' @param proj projection associated with the object
+#' @author Paul Conn \email{paul.conn@@noaa.gov}
+#' @return SpatialLines object giving approx southern ice edge
+#' @export
+get.edge.Bering<-function(SpDF,proj){
+  coords=coordinates(SpDF)
+  x=sort(unique(coords[,1]))
+  y=unique(coordinates(SpDF)[,2])
+  y.min=min(y)
+  y.max=max(y)
+  n.points=length(x)
+  Point.vec=matrix(0,n.points,2)
+  for(i in 1:n.points){
+    which.row=which(coords[,1]==x[i])
+    cur.y=coords[which.row,2]
+    cur.mat=data.frame(matrix(0,length(which.row),2))
+    cur.mat[,1]=as.numeric(cur.y)
+    cur.mat[,2]=as.numeric(SpDF[["ice_conc"]][which.row])
+    cur.mat=cur.mat[order(cur.mat[,1]),]
+    cur.mat[,2]=(cur.mat[,2]<=0.1)
+    cur.mat[1,2]=1  #southernmost cell gets a 1 by default
+    if(nrow(cur.mat)==1)cur.y=cur.mat[1,1]
+    else{
+      flag=0
+      j=1
+      while(flag==0){
+        j=j+1
+        if(j==nrow(cur.mat)){
+          cur.y=cur.mat[nrow(cur.mat),1]
+          flag=1          
+        }
+        else{
+          if(cur.mat[j,2]==0){
+            cur.y=cur.mat[j-1,1]
+            flag=1
+          }
+        }
+      }
+    }
+    Point.vec[i,]=c(x[i],cur.y)
+  }
+  L=SpatialLines(list(Lines(list(Line(Point.vec)),ID="a")),proj4string=CRS(proj))
+  L
+}
+
+
 #' Produce an adjacency matrix for a rectangular grid for use with areal spatial models (queens move)
 #' @param x number of cells on horizontal side of grid
 #' @param y number of cells on vertical side of grid
@@ -81,7 +124,7 @@ add.dist.s.ice.edge<-function(Grid,Grid_points,IceExtent,proj,mean_adjust=TRUE){
 #' @return adjacency matrix
 #' @export 
 #' @keywords adjacency
-#' @author Paul Conn
+#' @author Paul Conn \email{paul.conn@@noaa.gov}
 rect_adj <- function(x,y,byrow=FALSE){
   Ind=matrix(c(1:(x*y)),y,x,byrow=byrow)
   if(byrow==TRUE)Ind=t(Ind)

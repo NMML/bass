@@ -1,0 +1,4 @@
+export(add.dist.s.ice.edge)
+export(add.prop.land)
+export(get.edge.Bering)
+export(rect_adj)

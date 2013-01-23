@@ -9,11 +9,8 @@
 #' y_min <- -3.8e+06
 #' y_max <- -1.6e+06
 #'
-#' @author Josh London (josh.london@noaa.gov)
+#' @author Josh London \email{josh.london@@noaa.gov}
 #' @return extent object
-#' @examples
-#' ext <- GetBASSExtent()
-#' ext
 GetBASSExtent <- function() {
     require(raster)
     x_min <- 0

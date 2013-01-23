@@ -9,4 +9,7 @@
   Surveys. The 2012 BOSS surveys are the first surveys to
   rely on this package
 }
+\author{
+  Paul Conn & Josh London
+}
 

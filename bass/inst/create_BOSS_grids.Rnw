@@ -411,11 +411,14 @@ So, let's once again calculate distance from the centroid of each 25km by 25km t
   }  
 @
 
-Now we're done with the full Bering dataset.  Let's save our completed list object in \texttt{BeringData.Rdat}
+Now we're done with the full Bering dataset.  Let's add some metadata and save our completed 
+list object in \texttt{BeringData.Rdat}
 which can be loaded directly into R.  We'll also output a shapefile for use with
 GIS applications.
 
 <<Bchunk21>>=
+  Data$Meta=list(date.start="4Apr2012",date.end="14May2012")
+  Data$Meta$info="2012 PEP BOSS survey grid data for Okhotsk Sea"
   save(Data,file="BeringData.Rdat")
   writeOGR(Grid_reduced,dsn=".",layer="BeringGrid2012",driver="ESRI Shapefile")
 @

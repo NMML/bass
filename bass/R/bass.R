@@ -117,7 +117,7 @@ get.edge.Bering<-function(SpDF,proj){
 }
 
 
-#' Produce an adjacency matrix for a rectangular grid for use with areal spatial models (queens move)
+#' Produce an RW1 adjacency matrix for a rectangular grid for use with areal spatial models (queens move)
 #' @param x number of cells on horizontal side of grid
 #' @param y number of cells on vertical side of grid
 #' @param byrow If TRUE, cell indices are filled along rows (default is FALSE)
@@ -192,4 +192,51 @@ rect_adj <- function(x,y,byrow=FALSE){
   return(Adj)
 }
 
+#' Produce an RW2 Adjacency matrix for a rectangular grid for use with areal spatial models.
+#' This formulation uses cofficients inspired by a thin plate spline, as described in Rue & Held, section 3.4.2
+#' Here I'm outputting an adjacency matrix of 'neighbor weights' which makes Q construction for regular latices
+#' easy to do when not trying to make inference about all cells (i.e., one can just cut off 
+#' eliminate rows and columns associated with cells one isn't interested in and set Q=-Adj+Diag(sum(Adj)) 
+#' @param x number of cells on horizontal side of grid
+#' @param y number of cells on vertical side of grid
+#' @param byrow If TRUE, cell indices are filled along rows (default is FALSE)
+#' @return adjacency matrix
+#' @export 
+#' @keywords adjacency
+#' @author Paul Conn \email{paul.conn@@noaa.gov}
+rect_adj_RW2 <- function(x,y,byrow=FALSE){
+  cur.x=x+4  #make calculations on a larger grid and then cut off rows/columns at end
+  cur.y=y+4
+  Ind=matrix(c(1:(cur.x*cur.y)),cur.y,cur.x,byrow=byrow)
+  if(byrow==TRUE)Ind=t(Ind)
+  n.row=nrow(Ind)
+  n.col=ncol(Ind)
+  Adj=matrix(0,cur.x*cur.y,cur.x*cur.y)
+  for(i in 3:(n.row-2)){
+    for(j in 3:(n.col-2)){
+        #kings move
+        Adj[Ind[i,j],Ind[i,j]+1]=8
+        Adj[Ind[i,j],Ind[i,j]+n.row]=8
+        Adj[Ind[i,j],Ind[i,j]-n.row]=8
+        Adj[Ind[i,j],Ind[i,j]-1]=8
+        #bishops move        
+        Adj[Ind[i,j],Ind[i,j]+n.row-1]=-2
+        Adj[Ind[i,j],Ind[i,j]+n.row+1]=-2
+        Adj[Ind[i,j],Ind[i,j]-n.row-1]=-2
+        Adj[Ind[i,j],Ind[i,j]-n.row+1]=-2
+        #kings move + 1
+        Adj[Ind[i,j],Ind[i,j]+2]=-1
+        Adj[Ind[i,j],Ind[i,j]+2*n.row]=-1  
+        Adj[Ind[i,j],Ind[i,j]-2]=-1
+        Adj[Ind[i,j],Ind[i,j]-2*n.row]=-1  
+    }
+  }
+  #compile list of cells that need to be removed
+  I.rem=matrix(0,n.row,n.col)
+  I.rem[c(1,2,n.row-1,n.row),]=1
+  I.rem[,c(1,2,n.col-1,n.col)]=1
+  Adj=Adj[-which(I.rem==1),-which(I.rem==1)]
+  if(byrow==TRUE)Adj=t(Adj)
+  return(Adj)
+}
 

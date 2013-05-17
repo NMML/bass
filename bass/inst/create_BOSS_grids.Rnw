@@ -194,16 +194,27 @@ if(MEAN_ADJUST)Dist_shelf=Dist_shelf/mean(Dist_shelf)
 Grid_poly[["dist_shelf"]]=Dist_shelf
 @
 
+We'll now load a SpatialPolygonsDataFrame holding depth 
+(average bathymetry in meters) for each cell,
+as described by J. London in \texttt{Grid_Bathymetry.pdf}.
+
+<<Bchunk10b>>=
+load('Depth_Bering_static.Rdat') 
+Grid_poly$depth <-Depth_Bering_poly[["depth"]]
+if(MEAN_ADJUST)Grid_poly$depth=Grid_poly$depth/mean(Grid_poly$depth) #standradize by dividing by its mean
+@
+
 Now, we've attached all of the covariates that we plan to that are time constant (we still
 need to attach time varying covariates that are a function of changing sea ice concentration).
-Let's output our current grid before doing anything else.  We can also calculate a King's move
-adjacency matrix easily at this stage since the grid is a perfect rectangle (for use with areal
+Let's output our current grid before doing anything else.  We can also calculate
+adjacency matrices easily at this stage since the grid is a perfect rectangle (for use with areal
 spatial models):
 
 <<Bchunk11>>=
 save(Grid_poly,file="BOSS_Grid_Bering_static.Rdat")
 #load("BOSS_Grid_Bering_static.Rdat")
 Adj=rect_adj(x=dim_raster[2],y=dim_raster[1],byrow=TRUE)
+Adj2=rect_adj_RW2(x=dim_raster[2],y=dim_raster[1],byrow=TRUE)
 @
 
 The next step is to define which cells will be included in analysis.  We take out cells with
@@ -248,6 +259,7 @@ Include[which(I.Okhotsk==0)]=0
 Grid_reduced=Grid_poly[Include==1,]
 
 Adj_reduced=Adj[Include==1,Include==1]
+Adj2_reduced=Adj[Include==1,Include==1]
 plot(sic_raster, col = colorRampPalette(c("dark blue", "deepskyblue","skyblue", "lightskyblue", "white"))(20), main = "SSM/I Sea-Ice Concentration and PEP BOSS Extent\n01 April 2012")
 plot(alaska_dcw, col = "black", add = TRUE)
 plot(russia_dcw, col = "black", add = TRUE)
@@ -268,6 +280,7 @@ relevant covariates (both static and time varying) for the date in question (so 
 covariates for each daily SPDF to each have the same static covariates (distance from land, etc.):
 <<Bchunk14>>=
 Data=list(Adj=Adj_reduced)
+Data$Adj2=Adj2_reduced
 Data$Grid=vector("list",length(Date))  #allocate space for one SpatialPolygonsDataframe for each date in study
 for(idate in 1:length(Date))Data$Grid[[idate]]=Grid_reduced
 @
@@ -411,6 +424,20 @@ So, let's once again calculate distance from the centroid of each 25km by 25km t
   }  
 @
 
+We can also think about adding in a covariate for marine ecoregion, based
+upon the work of Piatt and Springer (2007), which
+we include as a shapefile ``Marine_Ecoregions_AK".
+
+<<Bchunk20b>>=
+  Ecoreg=readOGR("c:/users/paul.conn/git/bass/shapefiles/Marine_Ecoregions_AK.shp",layer="Marine_Ecoregions_AK")
+  Ecoreg=spTransform(Ecoreg, CRS(laea_180_proj))
+  Ecoregion=over(Data$Grid[[1]],Ecoreg)
+  Ecoregion=Ecoreg[["ECOREGION"]][Ecoregion]
+  Ecoregion[which(Ecoregion==12)]=24  #move one cell that was given 
+  for(idate in 1:length(Date))Data$Grid[[idate]]=spCbind(Data$Grid[[idate]],Ecoregion)
+@
+
+
 Now we're done with the full Bering dataset.  Let's add some metadata and save our completed 
 list object in \texttt{BeringData.Rdat}
 which can be loaded directly into R.  We'll also output a shapefile for use with
@@ -418,7 +445,7 @@ GIS applications.
 
 <<Bchunk21>>=
   Data$Meta=list(date.start="4Apr2012",date.end="14May2012")
-  Data$Meta$info="2012 PEP BOSS survey grid data for Okhotsk Sea"
+  Data$Meta$info="2012 PEP BOSS survey grid data for Bering Sea"
   save(Data,file="BeringData.Rdat")
   writeOGR(Grid_reduced,dsn=".",layer="BeringGrid2012",driver="ESRI Shapefile")
 @

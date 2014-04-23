@@ -30,6 +30,7 @@ libraries can easily be installed with the \texttt{install.packages} command.
 
 <<Bchunk1, cache=FALSE>>=
 library(sp)
+library(grid)
 library(rgdal)
 library(rgeos)
 library(raster)
@@ -38,6 +39,7 @@ library(maptools)
 library(gpclib)
 library(automap)
 library(ggplot2)
+library(plyr)
 #library(bass)
 
 DEBUG=TRUE
@@ -59,7 +61,7 @@ Since 2012 had a record amount of ice in the Bering Sea, we chose to loosely bas
 Note that the first day of U.S. seal surveys in 2012 was April 4, while the first day for Russia surveys was April 20.  
 We thus start by loading in a geotif for this date:
 <<Bchunk2>>=
-r<-raster("//afsc/akc-nmml/Polar/Data/Environ/SeaIce/SSMI_SIC/2012/nt_20120401_f17_nrt_n.bin.reproj.tif")
+r<-raster("//nmfs.local/akc-nmml/Polar/Data/Environ/SeaIce/SSMI_SIC/2012/nt_20120401_f17_nrt_n.bin.reproj.tif")
 @
 
 Ice concentration is rescaled to take on values of 0-100 using
@@ -89,6 +91,13 @@ data(alaska_dcw)
 data(russia_dcw)
 alaska_dcw <- spTransform(alaska_dcw, CRS(laea_180_proj))
 russia_dcw <- spTransform(russia_dcw, CRS(laea_180_proj))
+#do some cleaning to eliminate self intersections
+#inter=gIntersects(alaska_dcw,byid=TRUE)
+#ids = which(inter,arr.ind=TRUE)
+#ids=ids[(ids[,1]==ids[,2])==FALSE,]
+#alaska_dcw=alaska_dcw[-c(220,106,20,45,78,121,366),]  #simple way to get rid of self intersections - just get rid of offending polygons! Note none of these polygons are very big!!
+
+
 @
 
 The area encompassed by our ice imagery is much larger than we need (see J. London's readme file),
@@ -175,15 +184,23 @@ Shelf_break=spTransform(Shelf_break, CRS(laea_180_proj))
 Shelf_break1=gBoundary(Shelf_break[1,]) #US side of EEZ
 Shelf_break2=gBoundary(Shelf_break[2,]) #russia side
 #remove part of Shelf break that intersect with land or the EEZ line
-Shelf_break1=gDifference(Shelf_break1,gBuffer(alaska_dcw,width=10000,byid=TRUE))
-Shelf_break1=gDifference(Shelf_break1,gBuffer(russia_dcw,width=10000,byid=TRUE))
-Shelf_break2=gDifference(Shelf_break2,gBuffer(alaska_dcw,width=10000,byid=TRUE))
-Shelf_break2=gDifference(Shelf_break2,gBuffer(russia_dcw,width=10000,byid=TRUE))
+for(ipoly in 1:length(alaska_dcw)){  #have to do it one by one because buffered Alaska has intersections
+  Shelf_break1=gDifference(Shelf_break1,gBuffer(alaska_dcw[ipoly,],width=10000))
+}
+for(ipoly in 1:length(russia_dcw)){
+  Shelf_break1=gDifference(Shelf_break1,gBuffer(russia_dcw[ipoly,],width=10000))
+}
+for(ipoly in 1:length(alaska_dcw)){
+  Shelf_break2=gDifference(Shelf_break2,gBuffer(alaska_dcw[ipoly,],width=10000))
+}
+for(ipoly in 1:length(russia_dcw)){
+  Shelf_break2=gDifference(Shelf_break2,gBuffer(russia_dcw[ipoly,],width=10000))
+}
 
 EEZs=readOGR("c:/users/paul.conn/git/bass/shapefiles/EEZ_Albers83_BS.shp",layer="EEZ_Albers83_BS")
 EEZs=spTransform(EEZs, CRS(laea_180_proj))
 EEZ_Alaska=EEZs[1,]  #limit to Alaska EEZ
-Shelf_break1=gDifference(Shelf_break1,gBuffer(gBoundary(EEZ_Alaska),width=30000))
+Shelf_break1=gDifference(Shelf_break1,gBuffer(gBoundary(EEZ_Alaska),width=30000)) 
 Shelf_break2=gDifference(Shelf_break2,gBuffer(gBoundary(EEZ_Alaska),width=30000))
 
 Dist_shelf1=apply(gDistance(Grid_points,Shelf_break1,byid=TRUE),2,'min')
@@ -199,7 +216,7 @@ We'll now load a SpatialPolygonsDataFrame holding depth
 as described by J. London in \texttt{Grid_Bathymetry.pdf}.
 
 <<Bchunk10b>>=
-load('Depth_Bering_static.Rdat') 
+load('./bass/inst/Depth_Bering_static.Rdat') 
 Grid_poly$depth <-Depth_Bering_poly[["depth"]]
 if(MEAN_ADJUST)Grid_poly$depth=Grid_poly$depth/mean(Grid_poly$depth) #standradize by dividing by its mean
 @
@@ -214,7 +231,7 @@ spatial models):
 save(Grid_poly,file="BOSS_Grid_Bering_static.Rdat")
 #load("BOSS_Grid_Bering_static.Rdat")
 Adj=rect_adj(x=dim_raster[2],y=dim_raster[1],byrow=TRUE)
-Adj2=rect_adj_RW2(x=dim_raster[2],y=dim_raster[1],byrow=TRUE)
+#Adj2=rect_adj_RW2(x=dim_raster[2],y=dim_raster[1],byrow=TRUE) #the RW2 code is incorrect
 @
 
 The next step is to define which cells will be included in analysis.  We take out cells with
@@ -236,7 +253,7 @@ Include[which(Grid_poly[["land_cover"]]>0.99)]=0  #dont include points with > 99
 #scroll through sea ice data to determine which cells always occur in open water
 Date=c(paste("040",c(4:9),sep=''),paste("04",c(10:30),sep=''),paste("050",c(1:9),sep=''),paste("05",c(10:14),sep='')) #limit dates to 4/4-5/22 (first-last BOSS flights in 2012) NOTE: ice data 5/15-5/19 missing
 #Date=c(paste("04",c(20:27),sep='')) #limit dates to 4/20-4/27 (first-last BOSS flights used in power analysis)
-str1="//afsc/akc-nmml/Polar/Data/Environ/SeaIce/SSMI_SIC/2012/nt_2012"
+str1="//nmfs/akc-nmml/Polar/Data/Environ/SeaIce/SSMI_SIC/2012/nt_2012"
 str2="_f17_nrt_n.bin.reproj.tif"
 Ice1=rep(0,length(Include))
 for(idate in 1:length(Date)){
@@ -387,12 +404,18 @@ countour lines at 10\% ice concentration.  Then we use some functions in the \te
 <<Bchunk18>>=
   tmp.raster<-raster(nrow=dim_raster[1],ncol=dim_raster[2])
   extent(tmp.raster)=extent(Data$Grid[[1]])
-  for(idate in 1:length(Date)){
+  tmp.raster=rasterize(Data$Grid[[1]],tmp.raster,'ice_conc')
+  sic_contour=rasterToContour(tmp.raster,levels=c(0.1))
+  dist_contour=as.vector(gDistance(Grid_points[Include==1,],sic_contour,byid=TRUE))
+  Data$Grid[[1]]=spCbind(Data$Grid[[1]],dist_contour)
+  mean.contour=mean(dist_contour)
+  if(MEAN_ADJUST==TRUE)Data$Grid[[1]]@data[,"dist_contour"]=Data$Grid[[1]]@data[,"dist_contour"]/mean.contour
+  for(idate in 2:length(Date)){
     tmp.raster=rasterize(Data$Grid[[idate]],tmp.raster,'ice_conc')
     sic_contour=rasterToContour(tmp.raster,levels=c(0.1))
     dist_contour=as.vector(gDistance(Grid_points[Include==1,],sic_contour,byid=TRUE))
-    if(MEAN_ADJUST)dist_contour=dist_contour/mean(dist_contour)
     Data$Grid[[idate]]=spCbind(Data$Grid[[idate]],dist_contour)
+    if(MEAN_ADJUST==TRUE)Data$Grid[[idate]]@data[,"dist_contour"]=Data$Grid[[idate]]@data[,"dist_contour"]/mean.contour
   }  
 @
 
@@ -416,10 +439,15 @@ what this line looks like:
 So, let's once again calculate distance from the centroid of each 25km by 25km to southern ice edge for each day:
 
 <<Bchunk20>>=
-  for(idate in 1:length(Date)){
+  edge.line=get.edge.Bering(SpDF=Data$Grid[[1]],proj=laea_180_proj)        
+  dist_edge=as.vector(gDistance(Grid_points[Include==1,],edge.line,byid=TRUE))
+  mean.dist=mean(dist_edge)
+  if(MEAN_ADJUST)dist_edge=dist_edge/mean(dist_edge)
+  Data$Grid[[1]]=spCbind(Data$Grid[[1]],dist_edge)
+  for(idate in 2:length(Date)){
     edge.line=get.edge.Bering(SpDF=Data$Grid[[idate]],proj=laea_180_proj)        
     dist_edge=as.vector(gDistance(Grid_points[Include==1,],edge.line,byid=TRUE))
-    if(MEAN_ADJUST)dist_edge=dist_edge/mean(dist_edge)
+    if(MEAN_ADJUST)dist_edge=dist_edge/mean.dist
     Data$Grid[[idate]]=spCbind(Data$Grid[[idate]],dist_edge)
   }  
 @
@@ -446,7 +474,7 @@ GIS applications.
 <<Bchunk21>>=
   Data$Meta=list(date.start="4Apr2012",date.end="14May2012")
   Data$Meta$info="2012 PEP BOSS survey grid data for Bering Sea"
-  save(Data,file="BeringData.Rdat")
+  save(Data,file="BeringData2012_18April2014.Rdat")
   writeOGR(Grid_reduced,dsn=".",layer="BeringGrid2012",driver="ESRI Shapefile")
 @
 
@@ -458,7 +486,7 @@ subset the data:
     Data$Grid[[idate]]=Data$Grid[[idate]][I.Alaska,]
   }
   Data$Adj=Data$Adj[I.Alaska,I.Alaska]
-  save(Data,file="AlaskaBeringData.Rdat")
+  save(Data,file="AlaskaBeringData2012_17April2014.Rdat")
 @
 
 So, we now have an object to base analysis on, at least once we are able to integrate hotspot/photo data
@@ -478,7 +506,7 @@ japan <- spTransform(japan, CRS(laea_180_proj))
 
 Let's reload the large sea ice raster and cut it down to approximate size for the Okhotsk.
 <<Ochunk2>>=
-r<-raster("//afsc/akc-nmml/Polar/Data/Environ/SeaIce/SSMI_SIC/2012/nt_20120401_f17_nrt_n.bin.reproj.tif")
+r<-raster("//nmfs.local/akc-nmml/Polar/Data/Environ/SeaIce/SSMI_SIC/2012/nt_20120401_f17_nrt_n.bin.reproj.tif")
 fun <- function(x) {
   ifelse(x < 251, x/2.5, NA)
 }
@@ -592,7 +620,7 @@ Data=list(Adj=Adj_reduced)
 Date=c(paste("040",c(4:9),sep=''),paste("04",c(10:30),sep=''),paste("050",c(1:9),sep=''),paste("05",c(10:14),sep='')) #limit dates to 4/4-5/22 (first-last BOSS flights in 2012) NOTE: ice data 5/15-5/19 missing
 Data$Grid=vector("list",length(Date))  #allocate space for one SpatialPolygonsDataframe for each date in study
 for(idate in 1:length(Date))Data$Grid[[idate]]=Grid_reduced
-str1="//afsc/akc-nmml/Polar/Data/Environ/SeaIce/SSMI_SIC/2012/nt_2012"
+str1="//nmfs.local/akc-nmml/Polar/Data/Environ/SeaIce/SSMI_SIC/2012/nt_2012"
 str2="_f17_nrt_n.bin.reproj.tif"
 
 #attach daily sea ice concentration and distance to 10% sea-ice concentration contour

@@ -36,7 +36,7 @@ library(rgeos)
 library(raster)
 library(nPacMaps)  #from Josh London
 library(maptools)
-library(gpclib)
+#library(gpclib)
 library(automap)
 library(ggplot2)
 library(plyr)
@@ -61,7 +61,7 @@ Since 2012 had a record amount of ice in the Bering Sea, we chose to loosely bas
 Note that the first day of U.S. seal surveys in 2012 was April 4, while the first day for Russia surveys was April 20.  
 We thus start by loading in a geotif for this date:
 <<Bchunk2>>=
-r<-raster("//nmfs.local/akc-nmml/Polar/Data/Environ/SeaIce/SSMI_SIC/2012/nt_20120401_f17_nrt_n.bin.reproj.tif")
+r<-raster(" //nmfs/akc-nmml/Polar/Data/Environ/SeaIce/Nimbus/Sea_Ice_Concentrations_from_Nimbus-7_SMMR_and_DMSP_SSM_I-SSMIS_Passive_Microwave/nt_20120401_f17_v01_n.bin.reproj.tif")
 @
 
 Ice concentration is rescaled to take on values of 0-100 using
@@ -200,8 +200,8 @@ for(ipoly in 1:length(russia_dcw)){
 EEZs=readOGR("c:/users/paul.conn/git/bass/shapefiles/EEZ_Albers83_BS.shp",layer="EEZ_Albers83_BS")
 EEZs=spTransform(EEZs, CRS(laea_180_proj))
 EEZ_Alaska=EEZs[1,]  #limit to Alaska EEZ
-Shelf_break1=gDifference(Shelf_break1,gBuffer(gBoundary(EEZ_Alaska),width=30000)) 
-Shelf_break2=gDifference(Shelf_break2,gBuffer(gBoundary(EEZ_Alaska),width=30000))
+Shelf_break1=gDifference(Shelf_break1,gBuffer(gBoundary(EEZ_Alaska),width=34000)) 
+Shelf_break2=gDifference(Shelf_break2,gBuffer(gBoundary(EEZ_Alaska),width=34000))
 
 Dist_shelf1=apply(gDistance(Grid_points,Shelf_break1,byid=TRUE),2,'min')
 Dist_shelf2=apply(gDistance(Grid_points,Shelf_break2,byid=TRUE),2,'min')
@@ -253,8 +253,8 @@ Include[which(Grid_poly[["land_cover"]]>0.99)]=0  #dont include points with > 99
 #scroll through sea ice data to determine which cells always occur in open water
 Date=c(paste("040",c(4:9),sep=''),paste("04",c(10:30),sep=''),paste("050",c(1:9),sep=''),paste("05",c(10:14),sep='')) #limit dates to 4/4-5/22 (first-last BOSS flights in 2012) NOTE: ice data 5/15-5/19 missing
 #Date=c(paste("04",c(20:27),sep='')) #limit dates to 4/20-4/27 (first-last BOSS flights used in power analysis)
-str1="//nmfs/akc-nmml/Polar/Data/Environ/SeaIce/SSMI_SIC/2012/nt_2012"
-str2="_f17_nrt_n.bin.reproj.tif"
+str1="//nmfs/akc-nmml/Polar/Data/Environ/SeaIce/Nimbus/Sea_Ice_Concentrations_from_Nimbus-7_SMMR_and_DMSP_SSM_I-SSMIS_Passive_Microwave/nt_2012"
+str2="_f17_v01_n.bin.reproj.tif"
 Ice1=rep(0,length(Include))
 for(idate in 1:length(Date)){
   filename=paste(str1,Date[idate],str2,sep='')
@@ -474,7 +474,7 @@ GIS applications.
 <<Bchunk21>>=
   Data$Meta=list(date.start="4Apr2012",date.end="14May2012")
   Data$Meta$info="2012 PEP BOSS survey grid data for Bering Sea"
-  save(Data,file="BeringData2012_18April2014.Rdat")
+  save(Data,file="BeringData2012_5Aug2015.Rdat")
   writeOGR(Grid_reduced,dsn=".",layer="BeringGrid2012",driver="ESRI Shapefile")
 @
 
@@ -486,7 +486,7 @@ subset the data:
     Data$Grid[[idate]]=Data$Grid[[idate]][I.Alaska,]
   }
   Data$Adj=Data$Adj[I.Alaska,I.Alaska]
-  save(Data,file="AlaskaBeringData2012_17April2014.Rdat")
+  save(Data,file="AlaskaBeringData2012_5Aug.Rdat")
 @
 
 So, we now have an object to base analysis on, at least once we are able to integrate hotspot/photo data

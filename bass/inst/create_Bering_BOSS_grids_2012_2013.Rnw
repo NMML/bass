@@ -574,7 +574,8 @@ GIS applications.
 
 <<Bchunk21>>=
   Data$Meta=list(date.start.2012="5Apr2012",date.end.2012="22May2012")
-  Data$Meta=list(date.start.2013="5Apr2013",date.end.2012="9May2013")
+  Data$Meta$date.start.2013="5Apr2013"
+  Data$Meta$date.end.2013="9May2013"
   Data$Meta$info="2012-13 PEP BOSS survey grid data for Bering Sea"
   save(Data,file="BeringData2012_2013.Rdat")
   writeOGR(Grid_reduced,dsn=".",layer="BeringGrid2012_2013",driver="ESRI Shapefile")
